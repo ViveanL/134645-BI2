@@ -1,0 +1,183 @@
+if (!is.element("languageserver", installed.packages()[, 1])) {
+  install.packages("languageserver", dependencies = TRUE)
+}
+require("languageserver")
+
+# Milestone 1 ----
+
+### Issue 1: DESCRIPTIVE STATISTICS ----
+# Code
+library(readr)
+# Load the mice package
+library(mice)
+
+# Read the CSV file with read.csv
+library(readr)
+Segmentation_train <- read_csv("data/Segmentation_train.csv", 
+                               na = "0")
+View(Segmentation_train)
+
+# Dimensions
+dim(Segmentation_train)
+
+# Data Types
+sapply(Segmentation_train, class)
+
+# Measure of Frequency
+Segmentation_train_frequencies <- table(Segmentation_train$Age)
+
+# Measure of Central Tendency
+Segmentation_train_freq <- Segmentation_train$Age
+cbind(frequency = table(Segmentation_train_freq),
+      percentage = prop.table(table(Segmentation_train_freq)) * 100)
+
+Segmentation_train_mode <- names(table(Segmentation_train$Work_Experience))[
+  which(table(Segmentation_train$Work_Experience) ==
+          max(table(Segmentation_train$Work_Experience)))
+]
+print(Segmentation_train_mode)
+
+# Measure of Distribution
+summary(Segmentation_train)
+
+# Measure of Standard deviation
+sapply(Segmentation_train[, c(1:10)], sd)
+
+# Measure the variance of each variable
+sapply(Segmentation_train[, c(1:10)], var)
+
+# Measure of kurtosis of each variable
+if (!is.element("e1071", installed.packages()[, 1])) {
+  install.packages("e1071", dependencies = TRUE)
+}
+require("e1071")
+
+sapply(Segmentation_train[, 4], kurtosis, type = 2)
+
+# Measure of skewness of each variable
+sapply(Segmentation_train[, 4], skewness, type = 2)
+
+
+
+### Issue 2: STATISTICAL TEST (ANOVA)----
+Segmentation_train_one_way_anova <- aov(Age ~ Segmentation, data = Segmentation_train)
+summary(Segmentation_train_one_way_anova)
+
+### Issue 3: UNIVARIATE AND MULTIVARIATE PLOTS----
+# Load required libraries
+if (!is.element("caret", installed.packages()[, 1])) {
+  install.packages("caret", dependencies = TRUE)
+}
+require("caret")
+featurePlot(x = Segmentation_train[, 2:10], y = Segmentation_train[, 11],
+            plot = "box")
+
+if (!is.element("corrplot", installed.packages()[, 1])) {
+  install.packages("corrplot", dependencies = TRUE)
+}
+require("corrplot")
+corrplot(cor(Segmentation_train[, 4]), method = "circle")
+
+# Milestone 2 ----
+
+### Issue 5: MISSING VALUES, DATA IMPUTATION, AND DATA TRANSFORMATION ----
+# Load required libraries
+## dplyr ----
+if (require("dplyr")) {
+  require("dplyr")
+} else {
+  install.packages("dplyr", dependencies = TRUE,
+                   repos = "https://cloud.r-project.org")
+}
+
+# Is there missing data?
+any(is.na(Segmentation_train))
+
+# Milestone 3 ----
+### Issue 6: TRAINING THE MODEL MILESTONE ----
+# split the dataset
+train_index <- createDataPartition(Segmentation_train$Segmentation,
+                                   p = 0.75,
+                                   list = FALSE)
+Segmentation_train_train <- Segmentation_train[train_index, ]
+Segmentation_train_test <- Segmentation_train[-train_index, ]
+# Remove rows with any missing values
+Segmentation_train_train <- na.omit(Segmentation_train_train)
+# Check the data type
+str(Segmentation_train_train$Segmentation)
+
+# Convert to factor if needed
+breast_cancer_train$diagnosis <- as.factor(breast_cancer_train$diagnosis)
+
+
+
+### Classification: LDA with k-fold Cross Validation ----
+train_control <- trainControl(method = "cv", number = 5)
+
+# Assuming you want to use k-fold cross-validation as an example
+train_control <- caret::trainControl(method = "cv", number = 10)  # You can adjust 'number' for the desired number of folds
+
+Segmentation_train_model_lda <- caret::train(
+  Segmentation ~ ., 
+  data = Segmentation_train_train,
+  trControl = train_control, 
+  na.action = na.omit, 
+  method = "lda2",
+  metric = "Accuracy"
+)
+
+
+### Cross-validation ----
+# check if the outcome variable is a factor
+str(Segmentation_train$Segmentation)
+
+
+
+# Set the seed for reproducibility
+set.seed(123)
+
+# Define the training control
+library(caret)
+# Define the training control
+train_control <- trainControl(method = "cv",
+                              number = 10,
+                              search = "grid",
+                              classProbs = TRUE,
+                              summaryFunction = multiClassSummary)
+
+# Model training Random Forest
+### Train a Random Forest model----
+library(randomForest)
+# Convert the class levels to valid variable names
+levels(Segmentation_train_train$Segmentation) <- make.names(levels(Segmentation_train_train$Segmentation))
+
+# Train the Random Forest model
+rf_model <- train(Segmentation ~ ., data = Segmentation_train_train, method = "rf", trControl = train_control)
+
+rf_model <- train(Segmentation ~ ., data = Segmentation_train_train, method = "rf", trControl = train_control)
+
+# Make predictions on the testing set
+predictions <- predict(rf_model, newdata = Segmentation_train_test)
+
+
+
+# Milestone 4 ----
+### Issue 7: HYPER-PARAMETER TUNING AND ENSEMBLES
+
+# Load necessary libraries
+library(caret)
+library(randomForest)
+
+# Define the grid of hyperparameters for mtry
+grid <- expand.grid(mtry = c(2, 4, 6, 8, 10)) # Vary the number of variables randomly sampled as candidates at each split
+
+# Set up the control parameters for grid search
+control <- trainControl(method = "cv", number = 5)
+
+# Perform grid search for hyperparameters (only mtry)
+model_grid_search <- train(Age ~ ., data = Segmentation_train_train, method = "rf",
+                           trControl = control, tuneGrid = grid)
+
+# Milestone 5 ----
+### Issue 8: CONSOLIDATION ---
+saveRDS(Segmentation_train_model_lda, "./models/saved_Segmentation_train_model_lda.rds")
